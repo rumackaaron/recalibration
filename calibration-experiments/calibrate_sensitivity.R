@@ -39,7 +39,7 @@ map_join_tc = function(f, ...) {
 }
 
 swgtmf.forecast.values = readRDS(file.path(experiment.cache.dir,"swgtmf.forecast.values.rds"))
-swgtf.forecast.quantiles = map_join_tc(get_observed_quantile_cdc,
+swgtf.forecast.quantiles = map_join_tc(get_pit_cdc,
   swgtmf.forecast.values[,,,,"Bin",],swgtm.retro.observed.values[,,,,"Bin"])
 mode(swgtf.forecast.quantiles) = "numeric"
 

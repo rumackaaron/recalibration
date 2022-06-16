@@ -1,4 +1,11 @@
-dquantile = function(dist, qs, bins) {
+# Inverse cdf function for a histogram distribution
+# Inputs:
+#   dist: Vector of length n, dist[i] is probability of ith bin
+#   qs: Vector of length m, cumulative probabilities for which value is desired
+#   bins: Vector of length n+1, values of bins
+# Returns:
+#   Vector of length m, representing the inverse cdf of qs
+inv_cdf = function(dist, qs, bins) {
   d = c(0,cumsum(dist))
   idxs = apply(outer(qs,d,FUN="<"),1,function(x) { which(x)[1]})
   idxs[is.na(idxs)] = length(d)
@@ -7,6 +14,13 @@ dquantile = function(dist, qs, bins) {
   return(result)
 }
 
+# Create a histogram pdf from series of values and their quantiles
+# Inputs:
+#   qs: Vector of length m, series of values
+#   qvals: Vector of length m, the cumulative probabilities of qs in output distribution
+#   bins: Vector of length n+1, values of bins
+# Returns:
+#   Vector of length n, histogram pdf such that cdf(qs) = qvals
 qdistribution = function(qs, qvals, bins) {
   result = (2:length(bins)) %>>%
     lapply(function(bi) {
@@ -33,62 +47,48 @@ qdistribution = function(qs, qvals, bins) {
   return(result)
 }
 
-get_observed_quantile = function(forecast, val, bins) {
+# Returns PIT value of forecast and observed value
+# Inputs:
+#   forecast: Vector of length n, histogram pdf
+#   val: Scalar, observed value
+#   bins: Vector of length n+1, values of bins
+# Returns:
+#   Scalar, the cdf of forecast at val
+
+get_pit = function(forecast, val, bins) {
   low.bins = which(bins <= val)
   right.idx = which(bins > val)[1]
   right.wt = forecast[right.idx-1]*(bins[right.idx]-val)/(bins[right.idx]-bins[right.idx-1])
   return(sum(forecast[low.bins]) - right.wt)
 }
 
-get_observed_quantile_cdc = function(forecast, val) {
-  ##low.bins = which(bins <= val)
-  ##right.idx = which(bins > val)[1]
+# Same as get_pit, but accounts for CDC's rounding
+# Observed value is considered to be in middle of correct bin
+get_pit_cdc = function(forecast, val) {
   correct.bin = sum(1:length(val) * val)
   if (correct.bin > 1) {
     low.bins = forecast[1:(correct.bin-1)]
   }  else {
     low.bins = c()
   }
-  ##if (right.idx == length(bins)) {
-  ##  right.wt = forecast[right.idx-1]*(bins[right.idx]-val)/(bins[right.idx]-bins[right.idx-1])
-  ##} else {
-  ##  right.wt = 0.5*forecast[right.idx-1]
-  ##}
   return(sum(low.bins) + 0.5*forecast[[correct.bin]])
 }
 
-quantile_bias = function(qs) { 
-  sorted.qs = sort(qs)
-  freq = seq(0,1,length.out=length(qs))
-  return(sum(freq-sorted.qs)/length(qs))
-}
-
-quantile_spread = function(qs) {
-  sorted.qs = sort(qs)
-  freq = seq(0,1,length.out=length(qs))
-  diffs = freq-sorted.qs
-  return((sum(diffs[freq<=0.5]) - sum(diffs[freq>0.5]))/length(qs))
-}
-
-quantile_rmse = function(qs) {
-  sorted.qs = sort(qs)
-  freq = seq(0,1,length.out=length(qs))
-  return(sqrt(sum((freq-sorted.qs)^2)/length(qs)))
-}
-
-forecast_mean = function(forecast, bins) {
-  return(weighted.mean(bins,forecast))
-}
-
-forecast_std = function(forecast, bins) {
-  m = forecast_mean(forecast, bins)
-  return(sqrt(sum(forecast * (bins-m)^2)))
-}
-
+# Null correction, do not recalibrate forecast
 calibrate_forecast_null = function(forecast, qqs, bins) {
   forecast
 }
 
+# Nonparametric Recalibration
+# Inputs:
+#   forecast: Vector of length n, histogram pdf to be recalibrated
+#   qqs: PIT values used in recalibration training
+#   bins: Vector of length n+1, values of bins. If -1, defaults to 1:(n+1)
+#   alpha: Smoothing factor to blend recalibrated forecast with original forecast.
+#          0 will return full recalibrated forecast, 1 returns original forecast
+#   fit_spline: If TRUE, apply smoothing spline to qqs
+# Returns:
+#   Vector of length n, histogram pdf of recalibrated forecast
 calibrate_forecast = function(forecast, qqs, bins=-1, alpha=0, fit_spline=FALSE) {
   if (bins == -1) {
     bins = 1:(length(forecast)+1)
@@ -104,7 +104,7 @@ calibrate_forecast = function(forecast, qqs, bins=-1, alpha=0, fit_spline=FALSE)
   new.quantiles = pmin(pmax(0,new.quantiles),1)
   new.quantiles[1] = 0
   new.quantiles[length(new.quantiles)] = 1
-  forecast.quantiles = dquantile(forecast,new.quantiles,bins)
+  forecast.quantiles = inv_cdf(forecast,new.quantiles,bins)
   forecast.quantiles[1] = bins[[1]]
   forecast.quantiles[length(forecast.quantiles)] = bins[[length(bins)]]
   forecast.quantiles = forecast.quantiles[order(forecast.quantiles)] # Sometimes precision problems
@@ -112,6 +112,9 @@ calibrate_forecast = function(forecast, qqs, bins=-1, alpha=0, fit_spline=FALSE)
   return(calibrated.forecast)
 }
 
+# Nonparametric Recalibration
+# Similar to above, allows adding k uniformly distributed PIT values to
+# training set to lower recalibration training variance
 calibrate_forecast_pseudocount = function(k) {
   function(forecast, qqs, bins) {
     qqs = c(qqs,seq(0,1,length.out=k))
@@ -119,6 +122,15 @@ calibrate_forecast_pseudocount = function(k) {
   }
 }
 
+# Parametric Recalibration, assumes PIT values are drawn from beta distribution
+# Inputs:
+#   forecast: Vector of	length n, histogram pdf	to be recalibrated
+#   qqs: PIT values used in recalibration training
+#   bins: Vector of length n+1,	values of bins.	If -1, defaults	to 1:(n+1)
+#   alpha: Smoothing factor to blend recalibrated forecast with	original forecast.
+#          0 will return full recalibrated forecast, 1 returns original	forecast
+# Returns:
+#   Vector of length n,	histogram pdf of recalibrated forecast
 calibrate_forecast_beta = function(forecast, qqs, bins=-1, alpha=0) {
   if (bins == -1) {
     bins = 1:(length(forecast)+1)
@@ -131,9 +143,9 @@ calibrate_forecast_beta = function(forecast, qqs, bins=-1, alpha=0) {
   return(calibrated.forecast)
 }
 
+# Helper method
 calibrate_forecast_uniform_smoothing = function(cal, alpha, fit_spline=FALSE) {
   function(forecast, qqs, bins=-1) {
     return(cal(forecast, qqs, bins=bins, alpha=alpha, fit_spline=fit_spline))
   }
 }
-

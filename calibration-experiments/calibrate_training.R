@@ -36,7 +36,7 @@ map_join_tc = function(f, ...) {
 }
 
 swgtmf.forecast.values = readRDS(file.path("flusight-natreg-windows-run","swgtmf.forecast.values.rds"))[,,,4:7,,]
-swgtf.forecast.quantiles = map_join_tc(get_observed_quantile_cdc,
+swgtf.forecast.quantiles = map_join_tc(get_pit_cdc,
   swgtmf.forecast.values[,,,,"Bin",],swgtm.retro.observed.values[,,,4:7,"Bin"])
 mode(swgtf.forecast.quantiles) = "numeric"
 
