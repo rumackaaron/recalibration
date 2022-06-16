@@ -1,0 +1,17 @@
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(stringr)
+
+quantiles = readRDS("../flusight-natreg-spline-run/swgtfc.forecast.quantiles.rds")[,,,4:7,,"none"]
+df = plyr::adply(quantiles,.margins=1:5)
+df = as_tibble(df)
+
+ggplot(df) +
+  geom_density(aes(V1,group=Forecaster,color=Forecaster)) +
+  facet_wrap(~Target,nrow=2,ncol=2) +
+  guides(color="none") +
+  labs(x="PIT",y="Density") +
+  theme(aspect.ratio=0.75)
+
+ggsave("fig14.png",width=8,height=6)

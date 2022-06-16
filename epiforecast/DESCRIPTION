@@ -1,0 +1,59 @@
+Package: epiforecast
+Type: Package
+Title: Tools for forecasting semi-regular seasonal epidemic curves and similar
+    time series
+Version: 0.0.1
+Date: 2015-12-09
+Author: Logan C. Brooks, Sangwon Hyun, David C. Farrow, Aaron Rumack, Ryan J.
+    Tibshirani, Roni Rosenfeld
+Maintainer: Logan C. Brooks <lcbrooks@cs.cmu.edu>
+Imports:
+    stats,
+    utils,
+    lubridate,
+    splines,
+    glmgen,
+    glmnet,
+    httr,
+    Rcpp,
+    Matrix,
+    rlist,
+    Hmisc,
+    weights,
+    hexbin,
+    plotrix,
+    tibble,
+    dplyr,
+    pipeR,
+    matrixStats,
+    quantreg,
+    lpSolve,
+    parallel,
+    R.utils,
+    RCurl,
+    pbmcapply
+Description: Tools for forecasting semi-regular seasonal epidemic curves and
+    similar time series. Includes an empirical Bayes approach that forms a prior
+    by transforming historical curves, a basis regression approach that balances
+    matching observations from the current season and matching historical
+    seasons' measurements for future weeks, and timestep-by-timestep weighted
+    kernel density estimation on backward differences parameterized by both the
+    time series measurements and the current time.
+License: GPL-2
+RoxygenNote: 6.1.1
+Collate: 
+    'RcppExports.R'
+    'calibrate.R'
+    'cv_apply.R'
+    'delphi_epidata.R'
+    'ensemble.R'
+    'namesp.R'
+    'map_join.R'
+    'epiproject.R'
+    'match.R'
+    'forecast_type.R'
+    'target_spec.R'
+LinkingTo: Rcpp
+SystemRequirements:
+Suggests:
+    testthat

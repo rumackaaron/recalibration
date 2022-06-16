@@ -1,0 +1,35 @@
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(stringr)
+
+weights = readRDS("../flusight-natreg-spline-run/swtfc.weights.rds")
+weights = apply(weights,c(3,4,5),mean)
+df = plyr::adply(weights,.margins=1:3)
+
+df[["Calibration"]] = as.character(df[["Calibration"]])
+df[["Calibration"]][df[["Calibration"]] == "np"] = "Nonparametric"
+df[["Calibration"]][df[["Calibration"]] == "beta"] = "Parametric"
+df[["Calibration"]][df[["Calibration"]] == "none"] = "Null"
+df = df %>%
+  pivot_wider(names_from=Calibration,values_from=V1)
+
+evals = readRDS("../flusight-natreg-spline-run/swgtf.forecast.evaluations.rds")
+mode(evals) = "numeric"
+evals = apply(pmax(evals,-10),c(4,5),mean,na.rm=T)
+evals = sweep(evals,1,apply(evals,1,min),"-")
+evals = sweep(evals,1,apply(evals,1,max),"/")
+df1 = plyr::adply(evals,.margins=1:2)
+
+df = inner_join(df,df1) %>%
+  pivot_longer(cols=c(Nonparametric,Parametric,Null),
+               names_to="Calibration",values_to="Weight")
+df[["Calibration"]] = factor(df[["Calibration"]],levels=c("Nonparametric","Parametric","Null"))
+
+ggplot(df %>% filter(str_sub(Target,start=3) == "wk ahead")) +
+  geom_point(aes(x=V1,y=Weight,color=Target)) +
+  facet_wrap(~Calibration,nrow=3) +
+  labs(x="Normalized Mean Log Score",y="Weight",color="Target") +
+  theme(aspect.ratio=0.75)
+
+ggsave("fig13.png",width=8,height=6)
