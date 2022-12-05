@@ -1,10 +1,11 @@
 library("pipeR")
 library("stringr")
+library("jsonlite")
 devtools::load_all("../epiforecast")
 
 options(mc.cores=parallel::detectCores()-1L)
 
-params = fromJSON(paste(readLines(sprintf("%s/params.json",historical_forecast_dir)),collapse=""))
+params = fromJSON(paste(readLines("./params.json"),collapse=""))
 names(params) = tolower(names(params))
 
 historical_forecast_dir = params[["training_dir"]]
@@ -74,4 +75,4 @@ swgtf.forecast.values = map_join(df_to_val,
   swf.forecast.dfs,g.epigroups,t.targets) %>>%
   aperm(c(1:2,4:5,3))
 
-saveRDS(swgtf.forecast.values,file=file.path(experiment.cache.dir,"swgtf.forecast.values.rds"))
+saveRDS(swgtf.forecast.values,file=file.path(experiment_cache_dir,"swgtf.forecast.values.rds"))

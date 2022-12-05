@@ -8,5 +8,6 @@
   "week_window":3,
   "training_dir":"sample/training",
   "test_dir":"sample/test",
+  "calibration_method": "ensemble",
   "experiment_cache_dir":"sample/experiment_cache_dir"
 }

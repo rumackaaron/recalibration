@@ -1,5 +1,6 @@
 library("pipeR")
-library("rjson")
+library("stringr")
+library("jsonlite")
 devtools::load_all("../epiforecast")
 
 options(mc.cores=parallel::detectCores()-1L)
@@ -23,7 +24,6 @@ f.forecasters = str_split(params[["forecasters"]],",") %>>%
   stats::setNames(.) %>>%
   with_dimnamesnames("Forecaster")
 
-historical_dir = params[["historical_dir"]]
 experiment_cache_dir = params[["experiment_cache_dir"]]
 
 named_idx_list = function(lst) {
@@ -32,11 +32,11 @@ named_idx_list = function(lst) {
 s.idx.seasons = named_idx_list(s.retro.seasons)
 w.idx.weeks = named_idx_list(w.retro.model.weeks)
 g.idx.groups = named_idx_list(g.epigroups)
-t.idx.targets = named_idx_list(t.target.specs)
+t.idx.targets = named_idx_list(t.targets)
 f.idx.forecasters = named_idx_list(f.forecasters)
 
-c.calibrations = list('np'=calibrate_forecast,
-                      'beta'=calibrate_forecast_beta,
+c.calibrations = list('nonparametric'=calibrate_forecast,
+                      'parametric'=calibrate_forecast_beta,
                       'none'=calibrate_forecast_null) %>>%
   with_dimnamesnames("Calibration")
 
@@ -49,7 +49,7 @@ map_join_tc = function(f, ...) {
   map_join(function(...) { tryCatch(f(...), error = function(e) { NA })}, ...)
 }
 
-swgtf.forecast.values = readRDS(file.path(experiment.cache.dir,"swgtf.forecast.values.rds"))
+swgtf.forecast.values = readRDS(file.path(experiment_cache_dir,"swgtf.forecast.values.rds"))
 swgt.observed.values = readRDS(file.path(experiment_cache_dir,"swgt.observed.values.rds"))
 swgtf.retro.quantiles = readRDS(file.path(experiment_cache_dir,"swgtf.retro.quantiles.rds"))
 
@@ -59,9 +59,9 @@ swgtfc.forecast.values =
     readRDS(swgtfc.forecast.values.file)
   } else {
     map_join_tc(function(s,w,g,t,f,cal) {
-      week.idxs = w + -week.window:week.window
-      week.idxs = week.idxs[1 <= week.idxs & week.idxs <= length(w.idx.weeks)]
-      qs = swgtf.retro.quantiles[-s,week.idxs,,t,f]
+      week_idxs = w + -week_window:week_window
+      week_idxs = week_idxs[1 <= week_idxs & week_idxs <= length(w.idx.weeks)]
+      qs = swgtf.retro.quantiles[-s,week_idxs,,t,f]
       qs = qs[!is.na(qs)]
       return(cal(swgtf.forecast.values[[s,w,g,t,f]],qs))
     },
@@ -97,10 +97,12 @@ wtfc.weights =
                train = pmax(train[apply(train,1,function(lst) { all(!is.na(lst))}),],-10)
                degenerate.em.weights = degenerate_em_weights(exp(train))
                return(degenerate.em.weights)
-             })[,,,,,,1] %>>% aperm(c(2:4,1))
+             })[,,,,,,1]
+dim(wtfc.weights) = c(length(c.calibrations),length(w.retro.model.weeks),length(t.targets),length(f.forecasters))
+wtfc.weights = aperm(wtfc.weights, c(2:4,1))
 dimnames(wtfc.weights) <- dimnames(swgtfc.forecast.evaluations)[c(2,4,5,6)]
 
-wtfc.weights.file = file.path(experiment.cache.dir,"wtfc.weights.rds")
+wtfc.weights.file = file.path(experiment_cache_dir,"wtfc.weights.rds")
 if (!file.exists(wtfc.weights.file)) {
   saveRDS(wtfc.weights,wtfc.weights.file)
 }
