@@ -8,13 +8,19 @@ options(mc.cores=parallel::detectCores()-1L)
 params = fromJSON(paste(readLines("./params.json"),collapse=""))
 names(params) = tolower(names(params))
 
-s.retro.seasons = str_split(params[["seasons"]],",") %>>%
+s.training.seasons = str_split(params[["training"]][["seasons"]],",") %>>%
   stats::setNames(.) %>>%
   with_dimnamesnames("Season")
-w.retro.model.weeks = str_split(params[["weeks"]],",") %>>%
+s.test.seasons = str_split(params[["test"]][["seasons"]],",") %>>%
+  stats::setNames(.) %>>%
+  with_dimnamesnames("Season")
+w.training.model.weeks = str_split(params[["training"]][["weeks"]],",") %>>%
   stats::setNames(.) %>>%
   with_dimnamesnames("Model Week")
-g.epigroups = str_split(params[["locations"]],",") %>>%
+w.test.model.weeks = str_split(params[["test"]][["weeks"]],",") %>>%
+  stats::setNames(.) %>>%
+  with_dimnamesnames("Model Week")
+g.epigroups = str_split(params[["test"]][["locations"]],",") %>>%
   stats::setNames(.) %>>%
   with_dimnamesnames("Location")
 t.targets = str_split(params[["targets"]],",") %>>%
@@ -32,8 +38,8 @@ swgtf.retro.quantiles = readRDS(file.path(experiment_cache_dir,"swgtf.retro.quan
 named_idx_list = function(lst) {
   return(with_dimnames(1:length(lst),dimnames(lst)))
 }
-s.idx.seasons = named_idx_list(s.retro.seasons)
-w.idx.weeks = named_idx_list(w.retro.model.weeks)
+s.idx.seasons = named_idx_list(s.test.seasons)
+w.idx.training.weeks = named_idx_list(w.training.model.weeks)
 g.idx.groups = named_idx_list(g.epigroups)
 t.idx.targets = named_idx_list(t.targets)
 f.idx.forecasters = named_idx_list(f.forecasters)
@@ -52,7 +58,7 @@ map_join_tc = function(f, ...) {
   map_join(function(...) { tryCatch(f(...), error = function(e) { NA })}, ...)
 }
 
-swgtf.forecast.values = readRDS(file.path(experiment_cache_dir,"swgtf.forecast.values.rds"))
+swgtf.test.forecast.values = readRDS(file.path(experiment_cache_dir,"swgtf.test.forecast.values.rds"))
 
 wtfc.weights.file = file.path(experiment_cache_dir,"wtfc.weights.rds")
 if (file.exists(wtfc.weights.file)) {
@@ -63,14 +69,19 @@ swgtf.calibrated.forecast.values =
   if (calibration_method %in% c("none","nonparametric","parametric")) {
     map_join_tc(function(s,w,g,t,f) {
       week.idxs = w + -week_window:week_window
-      week.idxs = week.idxs[1 <= week.idxs & week.idxs <= length(w.retro.model.weeks)]
+      week.idxs = week.idxs[week.idxs %in% w.training.model.weeks]
       qs = swgtf.retro.quantiles[,week.idxs,,t,f]
       qs = qs[!is.na(qs)]
-      return(c.calibrations[[calibration_method]](swgtf.forecast.values[[s,w,g,t,f]],qs))
-    }, s.idx.seasons,w.idx.weeks,g.idx.groups,t.idx.targets,f.idx.forecasters)
+      return(c.calibrations[[calibration_method]](swgtf.test.forecast.values[[s,w,g,t,f]],qs))
+    }, s.idx.seasons,w.test.model.weeks,g.idx.groups,t.idx.targets,f.idx.forecasters)
   } else if (calibration_method == "ensemble") {
-    swgtfc.forecast.values.file = file.path(experiment_cache_dir,"swgtfc.forecast.values.rds")
-    swgtfc.forecast.values = readRDS(swgtfc.forecast.values.file)
+    swgtfc.forecast.values = map_join_tc(function(s,w,g,t,f,cal) {
+      week.idxs = w + -week_window:week_window
+      week.idxs = week.idxs[week.idxs %in% w.training.model.weeks]
+      qs = swgtf.retro.quantiles[,week.idxs,,t,f]
+      qs = qs[!is.na(qs)]
+      return(cal(swgtf.test.forecast.values[[s,w,g,t,f]],qs))
+    }, s.idx.seasons,w.test.model.weeks,g.idx.groups,t.idx.targets,f.idx.forecasters,c.calibrations)
     mult = function(a,b) { a*b }
     
     tmp = map_join_tc(mult,swgtfc.forecast.values,wtfc.weights,lapply_variant=lapply) %>>%

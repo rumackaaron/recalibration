@@ -1,13 +1,22 @@
 {
-  "seasons":["2000","2001","2002"],
-  "weeks":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21],
-  "locations":["AL","AK"],
+  "training":
+  {
+    "seasons":["2000","2001","2002"],
+    "weeks":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21],
+    "locations":["AL","AK"],
+    "dir":"sample/training"
+  },
+  "test":
+  {
+    "seasons":["2003"],
+    "weeks":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21],
+    "locations":["AL","AK"],
+    "dir":"sample/test"
+  },
   "targets":["Target"],
-  "forecasters":["Climatological","Past","Oracle"],
   "num_bins":[20],
+  "forecasters":["Climatological","Past","Oracle"],
   "week_window":3,
-  "training_dir":"sample/training",
-  "test_dir":"sample/test",
   "calibration_method": "ensemble",
   "experiment_cache_dir":"sample/experiment_cache_dir"
 }

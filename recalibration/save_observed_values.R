@@ -8,16 +8,16 @@ options(mc.cores=parallel::detectCores()-1L)
 params = fromJSON(paste(readLines("./params.json"),collapse=""))
 names(params) = tolower(names(params))
 
-historical_forecast_dir = params[["training_dir"]]
+historical_forecast_dir = params[["training"]][["training_dir"]]
 experiment_cache_dir = params[["experiment_cache_dir"]]
 
-s.retro.seasons = params[["seasons"]] %>>%
+s.retro.seasons = params[["training"]][["seasons"]] %>>%
   stats::setNames(.) %>>%
   with_dimnamesnames("Season")
-w.retro.model.weeks = params[["weeks"]] %>>%
+w.retro.model.weeks = params[["training"]][["weeks"]] %>>%
   stats::setNames(.) %>>%
   with_dimnamesnames("Model Week")
-g.epigroups = params[["locations"]] %>>%
+g.epigroups = params[["training"]][["locations"]] %>>%
   stats::setNames(.) %>>%
   with_dimnamesnames("Location")
 t.targets = params[["targets"]] %>>%
@@ -48,7 +48,7 @@ map_join_tc = function(f, ...) {
   map_join(function(...) { tryCatch(f(...), error = function(e) { NA })}, ...)
 }
 
-swgtf.forecast.values = readRDS(file.path(experiment_cache_dir,"swgtf.forecast.values.rds"))
+swgtf.forecast.values = readRDS(file.path(experiment_cache_dir,"swgtf.training.forecast.values.rds"))
 swgtf.retro.quantiles = map_join(get_pit_cdc, swgtf.forecast.values, swgt.observed.values)
 mode(swgtf.retro.quantiles) = "numeric"
 

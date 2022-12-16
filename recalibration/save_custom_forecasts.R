@@ -8,36 +8,14 @@ options(mc.cores=parallel::detectCores()-1L)
 params = fromJSON(paste(readLines("./params.json"),collapse=""))
 names(params) = tolower(names(params))
 
-historical_forecast_dir = params[["training_dir"]]
 experiment_cache_dir = params[["experiment_cache_dir"]]
 
-s.retro.seasons = params[["seasons"]] %>>%
-  stats::setNames(.) %>>%
-  with_dimnamesnames("Season")
-w.retro.model.weeks = params[["weeks"]] %>>%
-  stats::setNames(.) %>>%
-  with_dimnamesnames("Model Week")
-g.epigroups = params[["locations"]] %>>%
-  stats::setNames(.) %>>%
-  with_dimnamesnames("Location")
 t.targets = params[["targets"]] %>>%
   stats::setNames(.) %>>%
   with_dimnamesnames("Target")
 f.forecasters = params[["forecasters"]] %>>%
   stats::setNames(.) %>>%
   with_dimnamesnames("Forecaster")
-
-#forecasters = list.dirs(path=historical_forecast_dir,full_names=FALSE,recursive=FALSE)
-#seasons = c()
-#weeks = c()
-#for (f in forecasters) {
-#  forecast_files = Sys.glob(sprintf("%s/%s/*_*.csv",historical_forecast_dir,f))
-#  file_names = str_split(forecast_files, "/", simplify=TRUE)[,3]
-#  file_names = str_sub(file_names, end=-5)
-#  season_weeks = str_split(file_names,"_",simplify=TRUE)
-#  seasons = sort(unique(c(seasons,season_weeks[,1])))
-#  weeks = sort(unique(c(weeks, season_weeks[,2])))
-#}
 
 load_file = function(season, model.week, forecaster) {
   filename = sprintf("%s/%s/%s_%s.csv",
@@ -50,18 +28,6 @@ load_file = function(season, model.week, forecaster) {
   return(result)
 }
 
-swf.forecast.dfs = map_join(load_file,
-  s.retro.seasons, w.retro.model.weeks, f.forecasters)
-
-#locations = c()
-#targets = c()
-#for (i in length(swf.forecast.dfs)) {
-#  df = swf.forecast.dfs[[i]]
-#  names(df) = tolower(names(df))
-#  locations = sort(unique(c(locations,df[["location"]])))
-#  targets = sort(unique(c(targets,df[["target"]])))
-#}
-
 df_to_val = function(forecast.df, loc, target) {
   if(length(forecast.df) == 1 && is.na(forecast.df)) {
     return(NA)
@@ -71,8 +37,40 @@ df_to_val = function(forecast.df, loc, target) {
   return(forecast.df[mask,"value"])
 }
 
+## Save training forecasts in .rds file in cache directory
+historical_forecast_dir = params[["training"]][["dir"]]
+s.retro.seasons = params[["training"]][["seasons"]] %>>%
+  stats::setNames(.) %>>%
+  with_dimnamesnames("Season")
+w.retro.model.weeks = params[["training"]][["weeks"]] %>>%
+  stats::setNames(.) %>>%
+  with_dimnamesnames("Model Week")
+g.epigroups = params[["training"]][["locations"]] %>>%
+  stats::setNames(.) %>>%
+  with_dimnamesnames("Location")
+swf.forecast.dfs = map_join(load_file,
+                            s.retro.seasons, w.retro.model.weeks, f.forecasters)
 swgtf.forecast.values = map_join(df_to_val,
   swf.forecast.dfs,g.epigroups,t.targets) %>>%
   aperm(c(1:2,4:5,3))
 
-saveRDS(swgtf.forecast.values,file=file.path(experiment_cache_dir,"swgtf.forecast.values.rds"))
+saveRDS(swgtf.forecast.values,file=file.path(experiment_cache_dir,"swgtf.training.forecast.values.rds"))
+
+## Save test forecasts in .rds file in cache directory
+historical_forecast_dir = params[["test"]][["dir"]]
+s.retro.seasons = params[["test"]][["seasons"]] %>>%
+  stats::setNames(.) %>>%
+  with_dimnamesnames("Season")
+w.retro.model.weeks = params[["test"]][["weeks"]] %>>%
+  stats::setNames(.) %>>%
+  with_dimnamesnames("Model Week")
+g.epigroups = params[["test"]][["locations"]] %>>%
+  stats::setNames(.) %>>%
+  with_dimnamesnames("Location")
+swf.forecast.dfs = map_join(load_file,
+                            s.retro.seasons, w.retro.model.weeks, f.forecasters)
+swgtf.forecast.values = map_join(df_to_val,
+                                 swf.forecast.dfs,g.epigroups,t.targets) %>>%
+  aperm(c(1:2,4:5,3))
+
+saveRDS(swgtf.forecast.values,file=file.path(experiment_cache_dir,"swgtf.test.forecast.values.rds"))
