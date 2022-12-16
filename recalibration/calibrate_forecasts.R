@@ -8,25 +8,25 @@ options(mc.cores=parallel::detectCores()-1L)
 params = fromJSON(paste(readLines("./params.json"),collapse=""))
 names(params) = tolower(names(params))
 
-s.training.seasons = str_split(params[["training"]][["seasons"]],",") %>>%
+s.training.seasons = params[["training"]][["seasons"]] %>>%
   stats::setNames(.) %>>%
   with_dimnamesnames("Season")
-s.test.seasons = str_split(params[["test"]][["seasons"]],",") %>>%
+s.test.seasons = params[["test"]][["seasons"]] %>>%
   stats::setNames(.) %>>%
   with_dimnamesnames("Season")
-w.training.model.weeks = str_split(params[["training"]][["weeks"]],",") %>>%
+w.training.model.weeks = params[["training"]][["weeks"]] %>>%
   stats::setNames(.) %>>%
   with_dimnamesnames("Model Week")
-w.test.model.weeks = str_split(params[["test"]][["weeks"]],",") %>>%
+w.test.model.weeks = params[["test"]][["weeks"]] %>>%
   stats::setNames(.) %>>%
   with_dimnamesnames("Model Week")
-g.epigroups = str_split(params[["test"]][["locations"]],",") %>>%
+g.epigroups = params[["test"]][["locations"]] %>>%
   stats::setNames(.) %>>%
   with_dimnamesnames("Location")
-t.targets = str_split(params[["targets"]],",") %>>%
+t.targets = params[["targets"]] %>>%
   stats::setNames(.) %>>%
   with_dimnamesnames("Target")
-f.forecasters = str_split(params[["forecasters"]],",") %>>%
+f.forecasters = params[["forecasters"]] %>>%
   stats::setNames(.) %>>%
   with_dimnamesnames("Forecaster")
 
@@ -84,10 +84,10 @@ swgtf.calibrated.forecast.values =
     }, s.idx.seasons,w.test.model.weeks,g.idx.groups,t.idx.targets,f.idx.forecasters,c.calibrations)
     mult = function(a,b) { a*b }
     
-    tmp = map_join_tc(mult,swgtfc.forecast.values,wtfc.weights,lapply_variant=lapply) %>>%
+    tmp = map_join_tc(mult,swgtfc.forecast.values,wtfc.weights[w.test.model.weeks,,,],lapply_variant=lapply) %>>%
       apply(1:5,Reduce,f="+")
     map_join(function(s,w,g,t,f) { tmp[,s,w,g,t,f]},
-      s.idx.seasons,w.idx.weeks,g.idx.groups,t.idx.targets,f.idx.forecasters)
+      s.idx.seasons,w.test.model.weeks,g.idx.groups,t.idx.targets,f.idx.forecasters)
   }
 
 swgtf.calibrated.forecasts.file = file.path(experiment_cache_dir,"swgtf.calibrated.forecasts.rds")

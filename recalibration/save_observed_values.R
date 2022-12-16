@@ -8,7 +8,7 @@ options(mc.cores=parallel::detectCores()-1L)
 params = fromJSON(paste(readLines("./params.json"),collapse=""))
 names(params) = tolower(names(params))
 
-historical_forecast_dir = params[["training"]][["training_dir"]]
+historical_forecast_dir = params[["training"]][["dir"]]
 experiment_cache_dir = params[["experiment_cache_dir"]]
 
 s.retro.seasons = params[["training"]][["seasons"]] %>>%

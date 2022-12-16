@@ -8,19 +8,19 @@ options(mc.cores=parallel::detectCores()-1L)
 params = fromJSON(paste(readLines("./params.json"),collapse=""))
 names(params) = tolower(names(params))
 
-s.retro.seasons = str_split(params[["training"]][["seasons"]],",") %>>%
+s.retro.seasons = params[["training"]][["seasons"]] %>>%
   stats::setNames(.) %>>%
   with_dimnamesnames("Season")
-w.retro.model.weeks = str_split(params[["training"]][["weeks"]],",") %>>%
+w.retro.model.weeks = params[["training"]][["weeks"]] %>>%
   stats::setNames(.) %>>%
   with_dimnamesnames("Model Week")
-g.epigroups = str_split(params[["training"]][["locations"]],",") %>>%
+g.epigroups = params[["training"]][["locations"]] %>>%
   stats::setNames(.) %>>%
   with_dimnamesnames("Location")
-t.targets = str_split(params[["targets"]],",") %>>%
+t.targets = params[["targets"]] %>>%
   stats::setNames(.) %>>%
   with_dimnamesnames("Target")
-f.forecasters = str_split(params[["forecasters"]],",") %>>%
+f.forecasters = params[["forecasters"]] %>>%
   stats::setNames(.) %>>%
   with_dimnamesnames("Forecaster")
 
