@@ -30,3 +30,13 @@ The observed bins file must also be in the correct format. It must be located in
 To actually run the recalibration tool, first ensure that the data in `params.json` is correct, that the forecasts are in the proper format and location, and that the cache directory has been created. Then run `Rscript recalibrate_main.R` from this directory.
 
 The recalibrated forecasts will be located in the same directory and with the same format as the test forecasts, except `"_Recalibrated"` will be appended to each forecaster's name.
+
+## Sample Forecasts
+A sample set of forecasts is provided in the `sample` directory. There are 21 weeks in each season, and for each location and season, the true value for week `w` follows a beta distribution parameterized by $\alpha_w = 1 + (w-1)/20$ and $\beta_w = 2 - (w-1)/20$.
+
+We provide three sample forecasters:
+* Climatological: Produces the same forecast every week, the average density over all weeks.
+* Past: Produces the true distribution for the previous week.
+* Oracle: Produces the true distribution for the current week.
+
+The number of bins for discretization is 20, and sample observed bins are provided in `sample/training/observed_bins.csv`.

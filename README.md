@@ -2,7 +2,10 @@
 This package implements several methods for epidemiological forecasting.
 It also implements recalibration methods for epidemiological forecasting, described in this [paper](https://arxiv.org/abs/2112.06305).
 
-# Recalibration
+# Apply Recalibration to User Forecasts
+See the README in the `recalibration` folder.
+
+# Replication of Recalibration Experiments
 The recalibration methods are implemented in `epiforecast/R/calibrate.R` and scripts demonstrating their use on the FluSight Ensemble forecasters are located in `calibration-experiments`.
 
 To run the recalibration experiments, perform the following commands in the `calibration-experiments` directory:
