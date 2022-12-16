@@ -14,3 +14,4 @@ if (tolower(params[["calibration_method"]]) == "ensemble") {
   source("calculate_ensemble_weights.R")
 }
 source("calibrate_forecasts.R")
+source("write_recalibrated_forecasts.R")
